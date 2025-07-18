@@ -310,7 +310,7 @@
             </div>
 
             <div class="apps-grid" id="appsGrid">
-                <!-- 앱 카드들이 여기에 동적으로 추가됩니다 -->
+                
             </div>
         </div>
     </div>
@@ -325,133 +325,120 @@
                 this.updateStats();
                 this.renderApps();
             }
-
+    
             addApp(name, category, dailyLimit) {
                 const app = {
                     id: Date.now(),
-                    name: name,
-                    category: category,
-                    dailyLimit: dailyLimit,
+                    name,
+                    category,
+                    dailyLimit,
                     totalTime: 0,
                     isActive: false,
                     sessions: [],
-                    createdAt: new Date()
+                    createdAt: new Date().toISOString()
                 };
-                
                 this.apps.push(app);
                 this.saveData();
                 this.renderApps();
                 this.updateStats();
             }
-
+    
             startTracking(appId) {
                 const app = this.apps.find(a => a.id === appId);
                 if (!app || app.isActive) return;
-
+    
                 app.isActive = true;
                 this.startTimes[appId] = Date.now();
-                
+    
                 this.timers[appId] = setInterval(() => {
                     app.totalTime += 1;
                     this.updateAppCard(appId);
                     this.updateStats();
                     this.saveData();
                 }, 1000);
-
+    
                 this.renderApps();
             }
-
+    
             stopTracking(appId) {
                 const app = this.apps.find(a => a.id === appId);
                 if (!app || !app.isActive) return;
-
+    
                 app.isActive = false;
                 clearInterval(this.timers[appId]);
-                
+    
                 const sessionTime = Math.floor((Date.now() - this.startTimes[appId]) / 1000);
                 app.sessions.push({
                     start: this.startTimes[appId],
                     end: Date.now(),
                     duration: sessionTime
                 });
-
+    
                 delete this.timers[appId];
                 delete this.startTimes[appId];
-                
+    
                 this.renderApps();
                 this.updateStats();
                 this.saveData();
             }
-
+    
             deleteApp(appId) {
                 this.stopTracking(appId);
-                this.apps = this.apps.filter(a => a.id !== appId);
+                this.apps = this.apps.filter(app => app.id !== appId);
                 this.saveData();
                 this.renderApps();
                 this.updateStats();
             }
-
+    
             formatTime(seconds) {
                 const hours = Math.floor(seconds / 3600);
                 const minutes = Math.floor((seconds % 3600) / 60);
                 const secs = seconds % 60;
-                
-                if (hours > 0) {
-                    return `${hours}시간 ${minutes}분`;
-                } else if (minutes > 0) {
-                    return `${minutes}분 ${secs}초`;
-                } else {
-                    return `${secs}초`;
-                }
+                if (hours > 0) return `${hours}시간 ${minutes}분`;
+                if (minutes > 0) return `${minutes}분 ${secs}초`;
+                return `${secs}초`;
             }
-
+    
             updateAppCard(appId) {
                 const app = this.apps.find(a => a.id === appId);
                 if (!app) return;
-
                 const card = document.querySelector(`[data-app-id="${appId}"]`);
-                if (card) {
-                    const timeElement = card.querySelector('.app-time');
-                    const progressBar = card.querySelector('.progress-fill');
-                    const warningElement = card.querySelector('.warning');
-                    const alertElement = card.querySelector('.alert');
-                    
-                    timeElement.textContent = this.formatTime(app.totalTime);
-                    
-                    const progress = (app.totalTime / (app.dailyLimit * 60)) * 100;
-                    progressBar.style.width = Math.min(progress, 100) + '%';
-                    
-                    // 경고 및 알림 표시
-                    if (warningElement) warningElement.remove();
-                    if (alertElement) alertElement.remove();
-                    
-                    if (progress >= 100) {
-                        card.insertAdjacentHTML('beforeend', 
-                            '<div class="alert">⚠️ 일일 사용 제한을 초과했습니다!</div>'
-                        );
-                    } else if (progress >= 80) {
-                        card.insertAdjacentHTML('beforeend', 
-                            '<div class="warning">⚡ 사용 제한의 80%에 도달했습니다.</div>'
-                        );
-                    }
+                if (!card) return;
+    
+                const timeElement = card.querySelector('.app-time');
+                const progressBar = card.querySelector('.progress-fill');
+                const warningElement = card.querySelector('.warning');
+                const alertElement = card.querySelector('.alert');
+    
+                timeElement.textContent = this.formatTime(app.totalTime);
+                const progress = (app.totalTime / (app.dailyLimit * 60)) * 100;
+                progressBar.style.width = Math.min(progress, 100) + '%';
+    
+                if (warningElement) warningElement.remove();
+                if (alertElement) alertElement.remove();
+    
+                if (progress >= 100) {
+                    card.insertAdjacentHTML('beforeend', `<div class="alert">⚠️ 일일 사용 제한을 초과했습니다!</div>`);
+                } else if (progress >= 80) {
+                    card.insertAdjacentHTML('beforeend', `<div class="warning">⚡ 사용 제한의 80%에 도달했습니다.</div>`);
                 }
             }
-
+    
             renderApps() {
                 const grid = document.getElementById('appsGrid');
                 grid.innerHTML = '';
-
+    
+                const categoryEmoji = {
+                    social: '👥',
+                    entertainment: '🎬',
+                    game: '🎮',
+                    productivity: '💼',
+                    education: '📚',
+                    shopping: '🛒'
+                };
+    
                 this.apps.forEach(app => {
                     const progress = (app.totalTime / (app.dailyLimit * 60)) * 100;
-                    const categoryEmoji = {
-                        social: '👥',
-                        entertainment: '🎬',
-                        game: '🎮',
-                        productivity: '💼',
-                        education: '📚',
-                        shopping: '🛒'
-                    };
-
                     const card = document.createElement('div');
                     card.className = 'app-card';
                     card.setAttribute('data-app-id', app.id);
@@ -469,74 +456,68 @@
                         <div class="daily-limit">일일 제한: ${app.dailyLimit}분</div>
                         <div class="app-controls">
                             <button class="btn btn-start" onclick="monitor.startTracking(${app.id})" 
-                                    ${app.isActive ? 'disabled' : ''}>시작</button>
+                                ${app.isActive ? 'disabled' : ''}>시작</button>
                             <button class="btn btn-stop" onclick="monitor.stopTracking(${app.id})" 
-                                    ${!app.isActive ? 'disabled' : ''}>중지</button>
+                                ${!app.isActive ? 'disabled' : ''}>중지</button>
                             <button class="btn" onclick="monitor.deleteApp(${app.id})">삭제</button>
                         </div>
-                        ${progress >= 100 ? '<div class="alert">⚠️ 일일 사용 제한을 초과했습니다!</div>' : 
+                        ${progress >= 100 ? '<div class="alert">⚠️ 일일 사용 제한을 초과했습니다!</div>' :
                           progress >= 80 ? '<div class="warning">⚡ 사용 제한의 80%에 도달했습니다.</div>' : ''}
                     `;
-                    
                     grid.appendChild(card);
                 });
             }
-
+    
             updateStats() {
                 const totalTime = this.apps.reduce((sum, app) => sum + app.totalTime, 0);
                 const activeApps = this.apps.filter(app => app.isActive).length;
-                const exceededApps = this.apps.filter(app => 
-                    app.totalTime >= app.dailyLimit * 60
-                ).length;
+                const exceededApps = this.apps.filter(app => app.totalTime >= app.dailyLimit * 60).length;
                 const avgSession = totalTime > 0 ? Math.floor(totalTime / Math.max(this.apps.length, 1) / 60) : 0;
-
+    
                 document.getElementById('totalTime').textContent = this.formatTime(totalTime);
-                document.getElementById('activeApps').textContent = activeApps + '개';
-                document.getElementById('exceededApps').textContent = exceededApps + '개';
-                document.getElementById('avgSession').textContent = avgSession + '분';
+                document.getElementById('activeApps').textContent = `${activeApps}개`;
+                document.getElementById('exceededApps').textContent = `${exceededApps}개`;
+                document.getElementById('avgSession').textContent = `${avgSession}분`;
             }
-
+    
             saveData() {
                 const data = {
                     apps: this.apps,
                     lastSaved: new Date().toISOString()
                 };
-                // 브라우저 환경에서는 localStorage 대신 메모리에 저장
-                window.appMonitorData = data;
+                localStorage.setItem('appMonitorData', JSON.stringify(data));
             }
-
+    
             loadData() {
-                // 브라우저 환경에서는 메모리에서 데이터 로드
-                const data = window.appMonitorData;
-                if (data && data.apps) {
-                    this.apps = data.apps;
+                const data = localStorage.getItem('appMonitorData');
+                if (data) {
+                    const parsed = JSON.parse(data);
+                    if (parsed.apps) {
+                        // 깊은 복사된 앱 목록
+                        this.apps = parsed.apps.map(app => ({ ...app }));
+                    }
                 }
             }
         }
-
-        // 전역 모니터 인스턴스 생성
+    
         const monitor = new AppUsageMonitor();
-
-        // 앱 추가 함수
+    
         function addApp() {
             const name = document.getElementById('appName').value.trim();
             const category = document.getElementById('appCategory').value;
             const dailyLimit = parseInt(document.getElementById('dailyLimit').value);
-
+    
             if (!name || !dailyLimit || dailyLimit < 1) {
                 alert('앱 이름과 올바른 일일 제한 시간을 입력해주세요.');
                 return;
             }
-
+    
             monitor.addApp(name, category, dailyLimit);
-            
-            // 폼 초기화
             document.getElementById('appName').value = '';
             document.getElementById('dailyLimit').value = '';
         }
-
-        // 페이지 로드 시 샘플 데이터 추가
-        window.addEventListener('load', function() {
+    
+        window.addEventListener('load', function () {
             if (monitor.apps.length === 0) {
                 monitor.addApp('인스타그램', 'social', 60);
                 monitor.addApp('유튜브', 'entertainment', 90);
@@ -544,5 +525,4 @@
             }
         });
     </script>
-</body>
-</html>
+    
